@@ -1,5 +1,6 @@
 # TWDS-Traffic-Boom
-一個能刷TWDS mirror的小script，使用wget來獲取檔案
+一個能刷TWDS mirror的小script，使用wget來獲取檔案  
+使用方法皆一樣，不過看你想選擇能夠限速的版本，又或者選擇能夠直接跑滿速度的版本
 # 使用方法
 把此專案clone到你的裝置上
 ```
