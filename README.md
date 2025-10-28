@@ -22,4 +22,10 @@ screen
 ./twds-traffic.sh
 ```
 enjoy!，享受開始刷TWDS流量的過程  
-趕快塞滿TWDS的口(≧Д≦)
+
+2025/10/28 更新
+Windows Powershell 請先以系統管理員身份執行
+啟動指令:
+```
+.\Traffic-Boom-Windows-Version.ps1 -AllowExternalDownload -Url "https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-latest-x86_64-dvd1.iso" -ParallelDownloads 3
+```
