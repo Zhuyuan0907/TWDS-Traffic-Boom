@@ -1,5 +1,5 @@
 #!/bin/bash
-URL="https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-latest-x86_64-dvd1.iso"
+URL="https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-20251027.0-x86_64-dvd1.iso"
 
 if ! command -v trickle &> /dev/null; then
     echo "未找到 trickle，嘗試自動安裝..."
