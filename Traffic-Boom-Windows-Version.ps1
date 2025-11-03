@@ -1,5 +1,5 @@
 param(
-    [string] $Url = "https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-latest-x86_64-dvd1.iso",
+    [string] $Url = "https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-20251027.0-x86_64-dvd1.iso",
     [int] $ParallelDownloads = 3,
     [switch] $AllowExternalDownload,
     [int64] $SimulateBytesPerSecond = 50MB
