@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL="https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-latest-x86_64-dvd1.iso"
+URL="https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-20251027.0-x86_64-dvd1.iso"
 
 echo "----------------------------------------"
 echo "專門刷TWDS Mirror的東西"
