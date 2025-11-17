@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TWDS Traffic Boom - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .stat-speed {
+            color: #48bb78;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .devices-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .devices-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .device-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .device-item {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            border-left: 4px solid #48bb78;
+        }
+
+        .device-item.offline {
+            border-left-color: #fc8181;
+            opacity: 0.7;
+        }
+
+        .device-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #2d3748;
+        }
+
+        .device-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .device-stat {
+            font-size: 0.95em;
+        }
+
+        .device-stat-label {
+            color: #718096;
+        }
+
+        .device-stat-value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #48bb78;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.offline {
+            background: #fc8181;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .no-devices {
+            text-align: center;
+            color: #718096;
+            padding: 40px;
+            font-size: 1.1em;
+        }
+
+        .last-update {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .config-section {
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .config-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .config-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .config-input input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .config-input button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .config-input button:hover {
+            background: #5a67d8;
+        }
+
+        .reset-btn {
+            background: #fc8181 !important;
+        }
+
+        .reset-btn:hover {
+            background: #f56565 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TWDS Traffic Boom</h1>
+            <p>Real-time Traffic Statistics Dashboard</p>
+        </div>
+
+        <div class="config-section">
+            <h3>API Configuration</h3>
+            <div class="config-input">
+                <input type="text" id="apiEndpoint" placeholder="Enter your Cloudflare Workers API URL" value="">
+                <button onclick="saveApiEndpoint()">Save</button>
+                <button class="reset-btn" onclick="resetStats()">Reset Stats</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Downloaded</h3>
+                <div class="stat-value" id="totalRx">0 B</div>
+                <div class="stat-speed" id="totalRxSpeed">0 B/s</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Uploaded</h3>
+                <div class="stat-value" id="totalTx">0 B</div>
+                <div class="stat-speed" id="totalTxSpeed">0 B/s</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Devices</h3>
+                <div class="stat-value" id="deviceCount">0</div>
+                <div class="stat-speed">Online Now</div>
+            </div>
+            <div class="stat-card">
+                <h3>Combined Speed</h3>
+                <div class="stat-value" id="combinedSpeed">0 B/s</div>
+                <div class="stat-speed">Download + Upload</div>
+            </div>
+        </div>
+
+        <div class="devices-section">
+            <h2>Connected Devices</h2>
+            <div class="device-list" id="deviceList">
+                <div class="no-devices">No devices connected. Start the PowerShell script with -ApiEndpoint parameter.</div>
+            </div>
+        </div>
+
+        <div class="last-update">
+            Last updated: <span id="lastUpdate">Never</span>
+        </div>
+    </div>
+
+    <script>
+        let apiEndpoint = localStorage.getItem('twds_api_endpoint') || '';
+        let previousStats = null;
+
+        // Load saved API endpoint
+        document.getElementById('apiEndpoint').value = apiEndpoint;
+
+        function saveApiEndpoint() {
+            apiEndpoint = document.getElementById('apiEndpoint').value.trim();
+            if (apiEndpoint && !apiEndpoint.startsWith('http')) {
+                apiEndpoint = 'https://' + apiEndpoint;
+            }
+            localStorage.setItem('twds_api_endpoint', apiEndpoint);
+            alert('API endpoint saved!');
+            fetchStats();
+        }
+
+        function formatSize(bytes) {
+            if (bytes >= 1099511627776) return (bytes / 1099511627776).toFixed(2) + ' TB';
+            if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return bytes + ' B';
+        }
+
+        function formatSpeed(bytesPerSec) {
+            return formatSize(bytesPerSec) + '/s';
+        }
+
+        async function fetchStats() {
+            if (!apiEndpoint) {
+                console.log('No API endpoint configured');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiEndpoint}/api/stats`);
+                if (!response.ok) throw new Error('API request failed');
+
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        function updateDashboard(data) {
+            const { global, devices } = data;
+
+            // Calculate speeds based on previous stats
+            let rxSpeed = 0;
+            let txSpeed = 0;
+
+            if (devices && devices.length > 0) {
+                devices.forEach(device => {
+                    rxSpeed += device.rxSpeed || 0;
+                    txSpeed += device.txSpeed || 0;
+                });
+            }
+
+            // Update global stats
+            document.getElementById('totalRx').textContent = formatSize(global.totalRx);
+            document.getElementById('totalTx').textContent = formatSize(global.totalTx);
+            document.getElementById('totalRxSpeed').textContent = formatSpeed(rxSpeed);
+            document.getElementById('totalTxSpeed').textContent = formatSpeed(txSpeed);
+            document.getElementById('deviceCount').textContent = devices.length;
+            document.getElementById('combinedSpeed').textContent = formatSpeed(rxSpeed + txSpeed);
+
+            // Update device list
+            const deviceList = document.getElementById('deviceList');
+            if (devices.length === 0) {
+                deviceList.innerHTML = '<div class="no-devices">No devices connected. Start the PowerShell script with -ApiEndpoint parameter.</div>';
+            } else {
+                deviceList.innerHTML = devices.map(device => {
+                    const lastUpdate = new Date(device.lastUpdate);
+                    const isOnline = (Date.now() - lastUpdate.getTime()) < 30000; // 30 seconds threshold
+
+                    return `
+                        <div class="device-item ${isOnline ? '' : 'offline'}">
+                            <div>
+                                <div class="device-name">${escapeHtml(device.device)}</div>
+                                <div class="device-stats">
+                                    <div class="device-stat">
+                                        <span class="device-stat-label">Session DL:</span>
+                                        <span class="device-stat-value">${formatSize(device.totalRx)}</span>
+                                    </div>
+                                    <div class="device-stat">
+                                        <span class="device-stat-label">Session UL:</span>
+                                        <span class="device-stat-value">${formatSize(device.totalTx)}</span>
+                                    </div>
+                                    <div class="device-stat">
+                                        <span class="device-stat-label">DL Speed:</span>
+                                        <span class="device-stat-value">${formatSpeed(device.rxSpeed)}</span>
+                                    </div>
+                                    <div class="device-stat">
+                                        <span class="device-stat-label">UL Speed:</span>
+                                        <span class="device-stat-value">${formatSpeed(device.txSpeed)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="status-indicator ${isOnline ? '' : 'offline'}"></div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Update last update time
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('zh-TW');
+            previousStats = data;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function resetStats() {
+            if (!apiEndpoint) {
+                alert('Please configure API endpoint first');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to reset all statistics? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiEndpoint}/api/reset`, { method: 'POST' });
+                if (response.ok) {
+                    alert('Statistics reset successfully');
+                    fetchStats();
+                } else {
+                    alert('Failed to reset statistics');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Initial fetch and set up interval
+        fetchStats();
+        setInterval(fetchStats, 3000); // Update every 3 seconds
+    </script>
+</body>
+</html>
