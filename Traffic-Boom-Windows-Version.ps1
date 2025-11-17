@@ -1,23 +1,35 @@
 param(
-    [string] $Url = "https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-20251027.0-x86_64-dvd1.iso",
+    [string] $Url = "https://mirror.twds.com.tw/centos-stream/10-stream/BaseOS/x86_64/iso/CentOS-Stream-10-latest-x86_64-dvd1.iso",
     [int] $ParallelDownloads = 3,
-    [switch] $AllowExternalDownload,
-    [int64] $SimulateBytesPerSecond = 50MB
+    [switch] $SimulateOnly,
+    [int64] $SimulateBytesPerSecond = 50MB,
+    [string] $ApiEndpoint = "",
+    [string] $DeviceName = $env:COMPUTERNAME
 )
 
+# 預設為真實下載模式，除非指定 -SimulateOnly
+$AllowExternalDownload = -not $SimulateOnly
+
 if ($AllowExternalDownload) {
-    Write-Warning "你已啟用真實下載模式。請確認你擁有對 $Url 的測試/下載權限。否則請勿啟用。"
-    Start-Sleep -Seconds 2
+    Write-Host "真實下載模式已啟用。" -ForegroundColor Green
+    Write-Host "目標: $Url" -ForegroundColor Cyan
+} else {
+    Write-Warning "模擬模式 - 無實際網路流量"
 }
 
 Write-Host "----------------------------------------"
-Write-Host "TWDS 流量測試（修正版）"
+Write-Host "TWDS 流量測試" -ForegroundColor Yellow
 Write-Host "----------------------------------------"
-$modeStr = if ($AllowExternalDownload) { "真實下載 (已啟用)" } else { "模擬 (安全，無對外流量)" }
-Write-Host ("模式: {0}" -f $modeStr)
+$modeStr = if ($AllowExternalDownload) { "真實下載" } else { "模擬模式" }
+Write-Host ("模式: {0}" -f $modeStr) -ForegroundColor $(if ($AllowExternalDownload) { "Green" } else { "Yellow" })
 Write-Host "目標 URL: $Url"
 Write-Host ("平行下載數: {0}" -f $ParallelDownloads)
-Write-Host "（重新啟動腳本會重置計數）"
+Write-Host ("裝置名稱: {0}" -f $DeviceName)
+if ($ApiEndpoint) {
+    Write-Host ("API 端點: {0}" -f $ApiEndpoint) -ForegroundColor Cyan
+} else {
+    Write-Host "API 端點: 未設定（僅本地統計）" -ForegroundColor Gray
+}
 Write-Host "按 Ctrl+C 停止"
 Write-Host "----------------------------------------"
 
@@ -96,6 +108,31 @@ $TotalTx = 0L
 $prevTotalRx = 0L
 $prevTotalTx = 0L
 
+# API reporting interval (every 5 seconds)
+$lastApiReport = [DateTime]::Now
+$apiReportInterval = 5
+
+# Function to report to API
+function Send-TrafficReport {
+    param($endpoint, $device, $rx, $tx, $rxSpeed, $txSpeed)
+    if (-not $endpoint) { return }
+
+    try {
+        $body = @{
+            device = $device
+            totalRx = $rx
+            totalTx = $tx
+            rxSpeed = $rxSpeed
+            txSpeed = $txSpeed
+            timestamp = [DateTime]::UtcNow.ToString("o")
+        } | ConvertTo-Json
+
+        Invoke-RestMethod -Uri "$endpoint/api/report" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 5 -ErrorAction SilentlyContinue | Out-Null
+    } catch {
+        # Silently ignore API errors to not disrupt main functionality
+    }
+}
+
 try {
     while ($true) {
         Start-Sleep -Seconds 1
@@ -156,6 +193,13 @@ try {
         $rxSpeedStr = (Format-Size $rxDelta) + "/s"
         $txSpeedStr = (Format-Size $txDelta) + "/s"
 
+        # Report to API every N seconds
+        $now = [DateTime]::Now
+        if ($ApiEndpoint -and ($now - $lastApiReport).TotalSeconds -ge $apiReportInterval) {
+            Send-TrafficReport -endpoint $ApiEndpoint -device $DeviceName -rx $TotalRx -tx $TotalTx -rxSpeed $rxDelta -txSpeed $txDelta
+            $lastApiReport = $now
+        }
+
         # overwrite single line: use carriage return + no new line to mimic live update
         $outLine = "下載: {0} ({1}) | 上傳: {2} ({3})" -f $totalRxStr, $rxSpeedStr, $totalTxStr, $txSpeedStr
         Write-Host $outLine
@@ -163,6 +207,10 @@ try {
 } catch [System.Exception] {
     Write-Host "偵測到中止：$_"
 } finally {
+    # Send final report before exiting
+    if ($ApiEndpoint) {
+        Send-TrafficReport -endpoint $ApiEndpoint -device $DeviceName -rx $TotalRx -tx $TotalTx -rxSpeed 0 -txSpeed 0
+    }
     Get-Job | Where-Object { $_.State -eq 'Running' } | Stop-Job -Force -ErrorAction SilentlyContinue
     Get-Job | Remove-Job -Force -ErrorAction SilentlyContinue
     Remove-Item -Path $logFile -ErrorAction SilentlyContinue
